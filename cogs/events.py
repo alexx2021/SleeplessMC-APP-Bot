@@ -30,7 +30,7 @@ class Events(commands.Cog, command_attrs=dict(hidden=True)):
                 }
 
                 channel = await guild.create_text_channel(f'app-{user.name}', category=category, overwrites=overwrites)
-                await channel.send(f"{member.mention} please answer the following questions in this channel.\n\nWhat is your Minecraft username?\nHow old are you?\nWho invited you to the server?\nBriefly tell us about yourself.\nWhy would you like to be a part of our server?")
+                await channel.send(f"{member.mention} please answer the following questions in this channel.\n\nWhat is your Minecraft username?\nHow old are you?\nWho invited you to the server?\nBriefly tell us about yourself.\nWhy would you like to be a part of our server? \nPlease also repeat this sentence to signifiy your agreement and understanding of the rules in the <#919741501733478421> channel.\n\"I have read and understood the rules and ignorance is not an excuse for breaking them.\"")
                 
                 await self.bot.db.execute('INSERT INTO tickets VALUES (?,?)', (payload.user_id, channel.id))
                 await self.bot.db.commit()
