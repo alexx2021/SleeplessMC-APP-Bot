@@ -35,22 +35,25 @@ class Admin(commands.Cog):
                 
                 file = discord.File(fp=buffer, filename=f"{message.guild.id}-{message.channel.id}.txt")
 
-                applog = self.bot.get_channel(APP_LOG_CHANNEL) 
-                await applog.send(file=file, embed = e)
-                buffer.close()
-
-
                 user_id = int(row[0][0])
                 member = await get_or_fetch_member(self, ctx.guild, user_id)
-                await member.remove_roles(discord.utils.get(ctx.guild.roles, name="Applicant"))
-                await member.add_roles(discord.utils.get(ctx.guild.roles, name="Member"))
+
+                applog = self.bot.get_channel(APP_LOG_CHANNEL) 
+                await applog.send(file=file, embed = e, content=f"Info to allow apps to be searchable on discord\nTag: {member}\nID: {member.id}")
+                buffer.close()
+
+                if member is not None:
+                    await member.remove_roles(discord.utils.get(ctx.guild.roles, name="Applicant"))
+                    await member.add_roles(discord.utils.get(ctx.guild.roles, name="Member"))
                 await ctx.channel.delete()
 
                 generalchat = self.bot.get_channel(GENERAL_CHAT)
-                await generalchat.send(f"Welcome {member.mention}! Make sure to read <#{RULES_CHANNEL}>.")
+                if member is not None:
+                    await generalchat.send(f"Welcome {member.mention}! Make sure to read <#{RULES_CHANNEL}>.")
 
                 try:
-                    await member.send(f"Your application has been accepted by {ctx.author}! The server IP is `play.sleepless.community`.")
+                    if member is not None:
+                        await member.send(f"Your application has been accepted by {ctx.author}! The server IP is `play.sleepless.community`.")
                 except Exception as e:
                     pass
 
@@ -61,7 +64,7 @@ class Admin(commands.Cog):
             await self.bot.db.commit()
 
     @has_permissions(administrator=True)
-    @commands.command()
+    @commands.command(aliases=['reject'])
     async def deny(self, ctx, *, reason: str = None):
         try:
             row = await self.bot.db.execute_fetchall('SELECT * FROM tickets WHERE channel_id = ?',(ctx.channel.id,))
@@ -90,7 +93,8 @@ class Admin(commands.Cog):
 
 
                 try:
-                    await member.send(f"Your application has been denied by {ctx.author}. Reason: `{reason}`")
+                    if member is not None:
+                        await member.send(f"Your application has been denied by {ctx.author}. Reason: `{reason}`")
                 except Exception as e:
                     pass
 
