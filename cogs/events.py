@@ -30,10 +30,26 @@ class Events(commands.Cog, command_attrs=dict(hidden=True)):
                 }
 
                 channel = await guild.create_text_channel(f'app-{user.name}', category=category, overwrites=overwrites)
-                await channel.send(f"{member.mention} please answer the following questions in this channel.\n\nWhat is your Minecraft username?\nHow old are you?\nWho invited you to the server?\nBriefly tell us about yourself.\nWhy would you like to be a part of our server? \nPlease also repeat this sentence to signifiy your agreement and understanding of the rules in the <#919741501733478421> channel.\n\"I have read and understood the rules and ignorance is not an excuse for breaking them.\"")
+                await channel.send(f"{member.mention} please answer the following questions in this channel.\n**If you don't put any effort into your application, you won't get accepted!!**\n\n1. What is your Minecraft username?\n2. How old are you?\n3. Who invited you to the server?\n4. Briefly tell us about yourself.\n5. Why would you like to be a part of our server? \n\nPlease also repeat this sentence to signifiy your agreement and understanding of the rules in the <#919741501733478421> channel.\n\"I have read and understood the rules and ignorance is not an excuse for breaking them.\"")
                 
                 await self.bot.db.execute('INSERT INTO tickets VALUES (?,?)', (payload.user_id, channel.id))
                 await self.bot.db.commit()
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member):
+        
+        if member == self.bot.user:
+            return
+        row = await self.bot.db.execute_fetchall('SELECT channel_id FROM tickets WHERE user_id = ?',(member.id,))
+        if row:
+            channel = self.bot.get_channel(int(row[1]))
+            await self.bot.db.execute('DELETE FROM tickets WHERE channel_id = ?',(channel.id,))
+            await self.bot.db.commit()
+            await channel.delete()
+        else:
+            pass
+
+
 
 
 
