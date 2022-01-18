@@ -39,7 +39,9 @@ class Admin(commands.Cog):
                 member = await get_or_fetch_member(self, ctx.guild, user_id)
 
                 applog = self.bot.get_channel(APP_LOG_CHANNEL) 
-                await applog.send(file=file, embed = e, content=f"Info to allow apps to be searchable on discord\nTag: {member}\nID: {member.id}")
+                await applog.send(file=file, embed = e)
+                if member is not None:
+                    await applog.send(f"Info to allow apps to be searchable on discord\nTag: {member}\nID: {member.id}")
                 buffer.close()
 
                 if member is not None:
@@ -82,14 +84,16 @@ class Admin(commands.Cog):
                 
                 file = discord.File(fp=buffer, filename=f"{message.guild.id}-{message.channel.id}.txt")
 
+                user_id = int(row[0][0])
+                member = await get_or_fetch_member(self, ctx.guild, user_id)
+
                 applog = self.bot.get_channel(APP_LOG_CHANNEL) 
                 await applog.send(file=file, embed = e)
+                if member is not None:
+                    await applog.send(f"Info to allow apps to be searchable on discord\nTag: {member}\nID: {member.id}")
                 buffer.close()
 
                 await ctx.channel.delete()
-
-                user_id = int(row[0][0])
-                member = await get_or_fetch_member(self, ctx.guild, user_id)
 
 
                 try:
@@ -109,4 +113,4 @@ class Admin(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(Admin(bot)) 
+    bot.add_cog(Admin(bot))
