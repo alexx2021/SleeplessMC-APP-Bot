@@ -42,7 +42,7 @@ class Events(commands.Cog, command_attrs=dict(hidden=True)):
             return
         row = await self.bot.db.execute_fetchall('SELECT channel_id FROM tickets WHERE user_id = ?',(member.id,))
         if row:
-            channel = self.bot.get_channel(int(row[1]))
+            channel = self.bot.get_channel(int(row[0][0]))
             await self.bot.db.execute('DELETE FROM tickets WHERE channel_id = ?',(channel.id,))
             await self.bot.db.commit()
             await channel.delete()
