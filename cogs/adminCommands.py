@@ -51,7 +51,8 @@ class Admin(commands.Cog):
 
                 generalchat = self.bot.get_channel(GENERAL_CHAT)
                 if member is not None:
-                    await generalchat.send(f"Welcome {member.mention}! Make sure to read <#{RULES_CHANNEL}>.")
+                    await generalchat.send(f"Welcome to the server {member.mention}!")
+                    await generalchat.send("The server IP is `play.sleepless.community`\nTo link your minecraft account to your discord account, follow the instructions given upon joining.",delete_after=300)
 
                 try:
                     if member is not None:
