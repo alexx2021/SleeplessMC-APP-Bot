@@ -33,7 +33,7 @@ class Admin(commands.Cog):
                 e = discord.Embed(color=discord.Color.green(), title=f'{ctx.channel.name} Accepted')
                 e.timestamp = discord.utils.utcnow()
                 
-                file = discord.File(fp=buffer, filename=f"{message.guild.id}-{message.channel.id}.txt")
+                file = discord.File(fp=buffer, filename=f"{message.channel.id}.txt")
 
                 user_id = int(row[0][0])
                 member = await get_or_fetch_member(self, ctx.guild, user_id)
@@ -100,6 +100,7 @@ class Admin(commands.Cog):
                 try:
                     if member is not None:
                         await member.send(f"Your application has been denied by {ctx.author}. Reason: `{reason}`")
+                        await ctx.guild.kick(member, reason="Application denied")
                 except Exception as e:
                     pass
 
