@@ -100,7 +100,7 @@ class Admin(commands.Cog):
                 try:
                     if member is not None:
                         await member.send(f"Your application has been denied by {ctx.author}. Reason: `{reason}`")
-                        await ctx.guild.kick(member, reason="Application denied")
+                        #await ctx.guild.kick(member, reason="Application denied")
                 except Exception as e:
                     pass
 
