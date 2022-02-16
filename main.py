@@ -42,6 +42,7 @@ extensions = (
     )
 
 bot.load_extension("jishaku")
+bot.load_extension("SMC Master Sheet.py")
 count = 0
 for ext in extensions:
     bot.load_extension(f"cogs.{ext}")
