@@ -39,6 +39,7 @@ extensions = (
     "adminCommands",
     "events",
     "errors",
+    "SMC-Master-Sheet",
     )
 
 bot.load_extension("jishaku")
