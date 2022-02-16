@@ -15,8 +15,8 @@ Discipline = sheet.worksheet("Discipline")
 
 class BanList(commands.Cog):
 
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot):
+        self.bot = bot
 
     @has_permissions(administrator=True)
     @commands.command()
@@ -60,5 +60,5 @@ class BanList(commands.Cog):
         await ctx.send(f"{username}'s {amount} diamond block payment was added to the sheet successfully :white_check_mark:")
     
 
-def setup(client):
-    client.add_cog(BanList(client))
+def setup(bot):
+    bot.add_cog(BanList(bot))
