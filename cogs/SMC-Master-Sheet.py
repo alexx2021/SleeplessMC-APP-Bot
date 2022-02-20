@@ -10,6 +10,13 @@ sheet = sa.open("SMC master sheet")
 Banned_players = sheet.worksheet("Banned Players")
 SD_Payments = sheet.worksheet("SD Payments")
 Discipline = sheet.worksheet("Discipline")
+Finances = sheet.worksheet("Finances")
+
+def bottom_row(worksheet):
+    str_list = list(filter(None, worksheet.col_values(1)))
+    return int(len(str_list)+2)
+
+
 
 
 
@@ -58,6 +65,24 @@ class BanList(commands.Cog):
         SD_Payments.insert_row([username, amount], index=2)
         print(f"{username}'s {amount} diamond block payment was added to the sheet")
         await ctx.send(f"{username}'s {amount} diamond block payment was added to the sheet successfully :white_check_mark:")
+
+    @has_permissions(administrator=True)
+    @commands.command()
+    async def donation(self, ctx, donator, amount, fee):
+        try:
+            amount = float(amount)
+            fee = float(fee)
+        except:
+            await ctx.send('Amount and fee need to be a number.')
+            return
+        
+        row = bottom_row(Finances)
+        Finances.update_cell(row, 1, str(datetime.now()))
+        Finances.update_cell(row, 2, f'Donation ({donator})')
+        Finances.update_cell(row, 3, amount)
+        Finances.update_cell(row, 4, fee)
+        await ctx.send(f"{donator}'s ${amount} donation with a fee of ${fee} was added to the sheet successfully :white_check_mark:")
+
     
 
 def setup(bot):
