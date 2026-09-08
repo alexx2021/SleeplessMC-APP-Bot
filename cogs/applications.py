@@ -192,6 +192,7 @@ class Applications(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def setup_member_permissions(self, ctx: commands.Context) -> None:
         """Make non-panel channels visible only to members."""
+        await ctx.defer(ephemeral=True)
         guild = ctx.guild
         member_role = await get_or_fetch_role(guild, self.bot.config.member_role_id)
         if member_role is None:

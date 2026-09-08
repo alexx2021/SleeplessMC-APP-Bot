@@ -142,6 +142,7 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_member_permissions_setup_reports_results_and_preserves_overwrites(self):
+        events = []
         default_role = self.guild.default_role
         default_role.id = 1
         member_role = self.roles[7]
@@ -174,9 +175,17 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
         denied = channel("private", 12, visible=False)
         failed = channel("broken", 13)
         failed.set_permissions.side_effect = RuntimeError("Discord failed")
-        self.guild.fetch_channels.return_value = [panel, open_channel, denied, failed]
+        async def fetch_channels():
+            events.append("fetch_channels")
+            return [panel, open_channel, denied, failed]
+
+        self.guild.fetch_channels.side_effect = fetch_channels
         ctx = SimpleNamespace(
-            guild=self.guild, channel=panel, author="moderator", send=AsyncMock()
+            guild=self.guild,
+            channel=panel,
+            author="moderator",
+            defer=AsyncMock(side_effect=lambda **kwargs: events.append("defer")),
+            send=AsyncMock(),
         )
 
         with self.assertLogs("cogs.applications", level="ERROR"):
@@ -184,6 +193,8 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
                 Applications(self.bot), ctx
             )
 
+        ctx.defer.assert_awaited_once_with(ephemeral=True)
+        self.assertLess(events.index("defer"), events.index("fetch_channels"))
         self.guild.fetch_channels.assert_awaited_once_with()
         self.assertEqual(open_channel.set_permissions.await_count, 2)
         targets = [call.args[0] for call in open_channel.set_permissions.await_args_list]
