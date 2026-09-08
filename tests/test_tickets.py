@@ -54,6 +54,7 @@ class TicketTests(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_accept_fetches_uncached_resources(self):
+        self.ctx.interaction = object()
         self.guild.get_channel = lambda _: None
         self.guild.get_role = lambda _: None
         self.guild.fetch_channel = AsyncMock(return_value=self.general)
@@ -68,9 +69,12 @@ class TicketTests(unittest.IsolatedAsyncioTestCase):
 
         self.guild.fetch_channel.assert_awaited_once_with(4)
         self.assertEqual(self.guild.fetch_roles.await_count, 2)
+        self.ctx.send.assert_awaited_once_with("Application accepted.", ephemeral=True)
 
     async def test_deny_deletes_mapping_after_success(self):
+        self.ctx.interaction = object()
         await Tickets.deny.callback(self.cog, self.ctx, reason="Incomplete")
+        self.ctx.send.assert_awaited_once_with("Application denied.", ephemeral=True)
         self.assertEqual(
             await self.db.execute_fetchall("SELECT user_id, channel_id FROM tickets"), []
         )

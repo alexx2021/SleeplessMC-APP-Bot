@@ -108,6 +108,8 @@ class Tickets(commands.Cog):
                 await member.send(config.acceptance_message(str(ctx.author)))
             except discord.HTTPException:
                 log.info("Could not DM accepted applicant %s", member.id)
+        if getattr(ctx, "interaction", None) is not None:
+            await ctx.send("Application accepted.", ephemeral=True)
         await ctx.channel.delete(reason=f"Application accepted by {ctx.author}")
         await self.bot.db.execute(
             "DELETE FROM tickets WHERE channel_id = ?", (ctx.channel.id,)
@@ -132,6 +134,8 @@ class Tickets(commands.Cog):
                 )
             except discord.HTTPException:
                 log.info("Could not DM denied applicant %s", member.id)
+        if getattr(ctx, "interaction", None) is not None:
+            await ctx.send("Application denied.", ephemeral=True)
         await ctx.channel.delete(reason=f"Application denied by {ctx.author}")
         await self.bot.db.execute(
             "DELETE FROM tickets WHERE channel_id = ?", (ctx.channel.id,)
