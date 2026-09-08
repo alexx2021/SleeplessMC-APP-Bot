@@ -1,61 +1,51 @@
 import logging
+
+import discord
 from discord.ext import commands
-import traceback
-import sys
-logger = logging.getLogger('discord')
 
 
-class Errors(commands.Cog, command_attrs=dict(hidden=True)):
-    def __init__(self, bot):
-        self.bot = bot    
+log = logging.getLogger(__name__)
 
+
+class Errors(commands.Cog):
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
-
+    async def on_command_error(
+        self, ctx: commands.Context, error: commands.CommandError
+    ) -> None:
         error = getattr(error, "original", error)
-        # if isinstance(error, commands.CommandError):
-        #     error = error.original
-
         if isinstance(error, commands.CommandNotFound):
-            #await ctx.send('Invalid command used.')
             return
-        
-        elif isinstance(error, commands.MissingRequiredArgument):
-            return await ctx.send(f'Command is missing required arguments. Correct usage: `{ctx.command} {ctx.command.signature}`')
-        
-        elif isinstance(error, commands.CommandOnCooldown):
-            return await ctx.send(f'{ctx.author.mention}, You must wait **{round(error.retry_after, 2)}** seconds before using this command again.')
-        
-        elif isinstance(error, commands.MissingPermissions):
-            return await ctx.send(f"{ctx.author.mention}, {error}.")
-
-        elif isinstance(error, commands.BotMissingPermissions):
-            return await ctx.send(f"{error}.")
-
-        elif isinstance(error, commands.BadArgument):
-            return await ctx.send(f'Command was given bad/invalid arguments. `{error}`')
-        
-        elif isinstance(error, commands.NotOwner): 
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send(
+                f"Missing required arguments. Usage: `{ctx.command} {ctx.command.signature}`"
+            )
             return
-        
-        elif isinstance(error, commands.errors.CheckFailure):
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.send("Administrator permission is required.", ephemeral=True)
             return
-        else:
-
-            logger.warning(msg=f'COMMAND ERROR - {ctx.message.clean_content} - {error} - u.{ctx.author.id} g.{ctx.guild.id}')
-            #All unhandled Errors will print their original traceback
-            print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
-            traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
-
+        if isinstance(error, commands.NotOwner):
+            return
+        if isinstance(error, (commands.BadArgument, commands.UserInputError)):
+            await ctx.send(f"Invalid command arguments: {error}", ephemeral=True)
+            return
+        log.error("Command %s failed", ctx.command, exc_info=error)
+        await ctx.send("The command failed. Check the bot logs.", ephemeral=True)
 
     @commands.Cog.listener()
-    async def on_error(self, event, *args, **kwargs):
+    async def on_app_command_error(
+        self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError
+    ) -> None:
+        log.error("Application command failed", exc_info=error)
+        send = (
+            interaction.followup.send
+            if interaction.response.is_done()
+            else interaction.response.send_message
+        )
+        await send("The command failed. Check the bot logs.", ephemeral=True)
 
-        logger.warning(msg=f'EVENT ERROR - {event} - {traceback.format_exc()}')
-        
-        print(f'{event}')
-        print(f'{traceback.format_exc()}')
 
-def setup(bot):
-    bot.add_cog(Errors(bot))
+async def setup(bot: commands.Bot) -> None:
+    await bot.add_cog(Errors(bot))

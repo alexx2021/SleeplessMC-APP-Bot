@@ -1,65 +1,68 @@
+import asyncio
+import logging
+
+import aiosqlite
 import discord
 from discord.ext import commands
-from utils import setup
 
-import logging
-from dotenv import load_dotenv
-import os
-import aiosqlite
-import asyncio
-
-logger = logging.getLogger('discord')
-logger.setLevel(logging.INFO)
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-logger.addHandler(handler)
-
-load_dotenv()
-
-intents = discord.Intents.all()
+from config import Config, load_config
+from utils import migrate_tickets
 
 
-bot = commands.Bot(
-command_prefix="-", 
-case_insensitive=True, 
-intents=intents, 
-allowed_mentions=discord.AllowedMentions(roles=True, users=True, everyone=False), 
-activity=discord.Streaming(name=f"-help", url='https://www.twitch.tv/alexxwastakenlol'),
-)
-
-loop = asyncio.get_event_loop()
-bot.db = loop.run_until_complete(aiosqlite.connect('apps.db'))
-loop.create_task(setup(bot))
+EXTENSIONS = ("applications", "tickets", "owner_commands", "errors")
 
 
+class GameServerBot(commands.Bot):
+    def __init__(self, config: Config):
+        intents = discord.Intents.none()
+        intents.guilds = True
+        intents.members = True
+        intents.guild_messages = True
+        intents.message_content = True
+        super().__init__(
+            command_prefix="-",
+            case_insensitive=True,
+            intents=intents,
+            allowed_mentions=discord.AllowedMentions(
+                roles=True, users=True, everyone=False
+            ),
+            activity=discord.Game(name=config.bot_activity),
+        )
+        self.config = config
+        self.db: aiosqlite.Connection | None = None
+        self.application_lock = asyncio.Lock()
+
+    async def setup_hook(self) -> None:
+        self.db = await aiosqlite.connect(self.config.database_path)
+        await migrate_tickets(self.db)
+        for extension in EXTENSIONS:
+            await self.load_extension(f"cogs.{extension}")
+        if self.config.enable_jishaku:
+            await self.load_extension("jishaku")
+
+        guild = discord.Object(id=self.config.guild_id)
+        self.tree.copy_global_to(guild=guild)
+        await self.tree.sync(guild=guild)
+
+    async def close(self) -> None:
+        if self.db is not None:
+            await self.db.close()
+        await super().close()
+
+    async def on_ready(self) -> None:
+        logging.getLogger(__name__).info(
+            "Logged in as %s (%s) in %d guild(s)", self.user, self.user.id, len(self.guilds)
+        )
 
 
-extensions = (
-    "alexxOnly",
-    "adminCommands",
-    "events",
-    "errors",
-    "SMC-Master-Sheet",
+def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s:%(levelname)s:%(name)s: %(message)s",
     )
-
-bot.load_extension("jishaku")
-count = 0
-for ext in extensions:
-    bot.load_extension(f"cogs.{ext}")
-    print(f'Loaded {ext}')
-    count += 1
-
-@bot.event
-async def on_ready():
-    await bot.wait_until_ready()
-    print('--------------------------')
-    print(f'Logged in as: {bot.user.name}')
-    print(f'With ID: {bot.user.id}')
-    print(f'{count} total extensions loaded')
-    print(f"Servers - {str(len(bot.guilds))}")
-    print('--------------------------')
-    print('Bot is ready!')
+    config = load_config()
+    GameServerBot(config).run(config.discord_token, log_handler=None)
 
 
-TOKEN = os.getenv("DISCORD_TOKEN_SMCAPPS")
-bot.run(TOKEN)
+if __name__ == "__main__":
+    main()
