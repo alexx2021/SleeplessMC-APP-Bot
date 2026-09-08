@@ -7,7 +7,7 @@ A single-guild Discord API v10 bot for private applications, staff decisions, an
 1. Install Python 3.12–3.14 and run `pip install -r requirements.txt`.
 2. Copy `.env.example` to `.env`, fill every blank, and edit all example values for the community.
 3. Place the Google service-account file at `GOOGLE_SERVICE_ACCOUNT_FILE` and share `GOOGLE_SPREADSHEET_NAME` with that account.
-4. Run `python main.py`, then use `/setup-applications` once in the desired channel.
+4. Run `python main.py`, then use `/setup-applications` once in the desired channel. Run `/setup-member-permissions` in that same channel to make every other existing channel member-only.
 
 In the Discord Developer Portal, enable the privileged **Server Members Intent** and **Message Content Intent**. The bot needs View Channels, Send Messages, Manage Channels, Manage Roles, Read Message History, Attach Files, Embed Links, and Use Application Commands. Its role must be above the configured applicant and member roles.
 
@@ -15,7 +15,7 @@ In the Discord Developer Portal, enable the privileged **Server Members Intent**
 
 ## Commands
 
-- Staff administrators: `setup-applications`, `accept`, `deny`, `banlist`, `ban`, `discipline`, `payment`, and `donation`.
+- Staff administrators: `setup-applications`, `setup-member-permissions`, `accept`, `deny`, `banlist`, `ban`, `discipline`, `payment`, and `donation`.
 - Bot owner: `leave`, `listguilds`, and `dumpdb`.
 
 Google calls run off the Discord event loop. Jishaku loads only when `ENABLE_JISHAKU=true`.
@@ -27,6 +27,7 @@ Google calls run off the Discord event loop. Jishaku loads only when `ENABLE_JIS
 - Verify all configured channel and role IDs in a test guild.
 - Start the bot and confirm slash-command sync.
 - Post the application panel, restart the bot, and test its button again.
+- Run `setup-member-permissions` in the panel channel and review its changed, skipped, and failed channel report.
 - Confirm ticket privacy, applicant/member role changes, acceptance, denial, transcripts, and member-departure cleanup.
 - Run each Google command and confirm it updates the configured worksheet.
 - Retire the old reaction panel after the button workflow passes.

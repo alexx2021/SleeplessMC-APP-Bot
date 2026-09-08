@@ -7,6 +7,31 @@ from discord.ext import commands
 log = logging.getLogger(__name__)
 
 
+def _channel_label(channel: discord.abc.GuildChannel) -> str:
+    return f"{channel.name} ({channel.id})"
+
+
+def _split_messages(lines: list[str], limit: int = 2_000) -> list[str]:
+    messages: list[str] = []
+    current = ""
+    for line in lines:
+        while len(line) > limit:
+            if current:
+                messages.append(current)
+                current = ""
+            messages.append(line[:limit])
+            line = line[limit:]
+        if not line:
+            continue
+        if current and len(current) + len(line) + 1 > limit:
+            messages.append(current)
+            current = ""
+        current = f"{current}\n{line}".lstrip("\n")
+    if current:
+        messages.append(current)
+    return messages
+
+
 class ApplicationView(discord.ui.View):
     def __init__(self, bot: commands.Bot):
         super().__init__(timeout=None)
@@ -149,6 +174,83 @@ class Applications(commands.Cog):
             color=discord.Color.blurple(),
         )
         await ctx.send(embed=embed, view=ApplicationView(self.bot))
+
+    @commands.hybrid_command(name="setup-member-permissions")
+    @commands.guild_only()
+    @commands.has_permissions(administrator=True)
+    async def setup_member_permissions(self, ctx: commands.Context) -> None:
+        """Make non-panel channels visible only to members."""
+        guild = ctx.guild
+        member_role = guild.get_role(self.bot.config.member_role_id)
+        if member_role is None:
+            await ctx.send("Cannot set up member permissions: the configured member role is missing.", ephemeral=True)
+            return
+
+        changed: list[str] = []
+        skipped: list[str] = []
+        failures: list[str] = []
+        exceptions: list[str] = []
+        command_channel_id = ctx.channel.id
+        for channel in guild.channels:
+            label = _channel_label(channel)
+            if channel.id == command_channel_id:
+                skipped.append(f"{label} — command channel")
+                continue
+            try:
+                for target, overwrite in channel.overwrites.items():
+                    if (
+                        target.id not in {guild.default_role.id, member_role.id}
+                        and overwrite.view_channel is True
+                    ):
+                        exceptions.append(
+                            f"{label} — explicit visibility grant preserved"
+                        )
+                        break
+                if not channel.permissions_for(guild.default_role).view_channel:
+                    skipped.append(f"{label} — already denies @everyone")
+                    continue
+
+                everyone = channel.overwrites_for(guild.default_role)
+                everyone.view_channel = False
+                await channel.set_permissions(
+                    guild.default_role,
+                    overwrite=everyone,
+                    reason=f"Member-only channel setup by {ctx.author}",
+                )
+                member = channel.overwrites_for(member_role)
+                member.view_channel = True
+                await channel.set_permissions(
+                    member_role,
+                    overwrite=member,
+                    reason=f"Member-only channel setup by {ctx.author}",
+                )
+                changed.append(label)
+            except Exception as error:
+                log.exception("Could not update permissions for channel %s", channel.id)
+                failures.append(f"{label} — {error}")
+
+        lines = [
+            "Member permissions setup complete.",
+            "",
+            f"Changed ({len(changed)}):",
+            *(f"- {label}" for label in changed),
+            "",
+            f"Skipped ({len(skipped)}):",
+            *(f"- {label}" for label in skipped),
+            "",
+            f"Failures ({len(failures)}):",
+            *(f"- {label}" for label in failures),
+        ]
+        if exceptions:
+            lines.extend(
+                [
+                    "",
+                    "Possible exceptions (explicit grants preserved):",
+                    *(f"- {label}" for label in exceptions),
+                ]
+            )
+        for message in _split_messages(lines):
+            await ctx.send(message, ephemeral=True)
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member) -> None:

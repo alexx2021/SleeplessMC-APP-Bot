@@ -43,6 +43,7 @@ class CommandRegistrationTests(unittest.IsolatedAsyncioTestCase):
                 "listguilds",
                 "payment",
                 "setup-applications",
+                "setup-member-permissions",
             }
             self.assertEqual(
                 {command.name for command in bot.commands} - {"help"}, commands

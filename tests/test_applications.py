@@ -122,6 +122,73 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
             ctx.send.await_args.kwargs["embed"].title, "Example Server Applications"
         )
 
+    async def test_member_permissions_setup_reports_results_and_preserves_overwrites(self):
+        default_role = self.guild.default_role
+        default_role.id = 1
+        member_role = self.roles[7]
+        member_role.id = 7
+        applicant = MagicMock(spec=discord.Member)
+        applicant.id = 42
+
+        def channel(name, channel_id, visible=True, overwrites=None):
+            result = MagicMock(spec=discord.TextChannel)
+            result.name = name
+            result.id = channel_id
+            result.permissions_for.return_value = SimpleNamespace(view_channel=visible)
+            result.overwrites = overwrites or {}
+            result.overwrites_for.side_effect = lambda target: result.overwrites.get(
+                target, discord.PermissionOverwrite()
+            )
+            result.set_permissions = AsyncMock()
+            return result
+
+        panel = channel("applications", 10)
+        open_channel = channel(
+            "open",
+            11,
+            overwrites={
+                default_role: discord.PermissionOverwrite(send_messages=False),
+                member_role: discord.PermissionOverwrite(send_messages=False),
+                applicant: discord.PermissionOverwrite(view_channel=True),
+            },
+        )
+        denied = channel("private", 12, visible=False)
+        failed = channel("broken", 13)
+        failed.set_permissions.side_effect = RuntimeError("Discord failed")
+        self.guild.channels = [panel, open_channel, denied, failed]
+        ctx = SimpleNamespace(
+            guild=self.guild, channel=panel, author="moderator", send=AsyncMock()
+        )
+
+        with self.assertLogs("cogs.applications", level="ERROR"):
+            await Applications.setup_member_permissions.callback(
+                Applications(self.bot), ctx
+            )
+
+        self.assertEqual(open_channel.set_permissions.await_count, 2)
+        targets = [call.args[0] for call in open_channel.set_permissions.await_args_list]
+        self.assertEqual(targets, [default_role, member_role])
+        self.assertFalse(
+            open_channel.set_permissions.await_args_list[0].kwargs["overwrite"].view_channel
+        )
+        self.assertFalse(
+            open_channel.set_permissions.await_args_list[0].kwargs["overwrite"].send_messages
+        )
+        self.assertTrue(open_channel.overwrites[applicant].view_channel)
+        self.assertTrue(
+            open_channel.set_permissions.await_args_list[1].kwargs["overwrite"].view_channel
+        )
+        self.assertEqual(denied.set_permissions.await_count, 0)
+        self.assertEqual(panel.set_permissions.await_count, 0)
+        self.assertEqual(failed.set_permissions.await_count, 1)
+        response = "\n".join(call.args[0] for call in ctx.send.await_args_list)
+        self.assertIn("open (11)", response)
+        self.assertIn("applications (10)", response)
+        self.assertIn("private (12)", response)
+        self.assertIn("broken (13)", response)
+        self.assertIn("Failures (1)", response)
+        self.assertIn("Possible exceptions", response)
+
 
 if __name__ == "__main__":
     unittest.main()
