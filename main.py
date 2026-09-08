@@ -9,7 +9,7 @@ from config import Config, load_config
 from utils import migrate_tickets
 
 
-EXTENSIONS = ("applications", "tickets", "owner_commands", "errors")
+EXTENSIONS = ("applications", "tickets", "sheet_commands", "owner_commands", "errors")
 
 
 class GameServerBot(commands.Bot):
