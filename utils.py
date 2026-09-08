@@ -51,3 +51,22 @@ async def get_or_fetch_member(
         return await guild.fetch_member(member_id)
     except discord.NotFound:
         return None
+
+
+async def get_or_fetch_channel(
+    guild: discord.Guild, channel_id: int
+) -> discord.abc.GuildChannel | None:
+    channel = guild.get_channel(channel_id)
+    if channel is not None:
+        return channel
+    try:
+        return await guild.fetch_channel(channel_id)
+    except discord.NotFound:
+        return None
+
+
+async def get_or_fetch_role(guild: discord.Guild, role_id: int) -> discord.Role | None:
+    role = guild.get_role(role_id)
+    if role is not None:
+        return role
+    return next((role for role in await guild.fetch_roles() if role.id == role_id), None)

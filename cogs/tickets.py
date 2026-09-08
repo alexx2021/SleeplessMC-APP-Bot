@@ -4,7 +4,7 @@ import logging
 import discord
 from discord.ext import commands
 
-from utils import get_or_fetch_member
+from utils import get_or_fetch_channel, get_or_fetch_member, get_or_fetch_role
 
 
 log = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ class Tickets(commands.Cog):
         color: discord.Color,
     ) -> discord.Member | None:
         config = self.bot.config
-        log_channel = ctx.guild.get_channel(config.app_log_channel_id)
+        log_channel = await get_or_fetch_channel(ctx.guild, config.app_log_channel_id)
         if log_channel is None:
             await ctx.send(
                 "The configured application log channel is missing.", ephemeral=True
@@ -80,9 +80,9 @@ class Tickets(commands.Cog):
         if user_id is None:
             return
         config = self.bot.config
-        general = ctx.guild.get_channel(config.general_channel_id)
-        applicant = ctx.guild.get_role(config.applicant_role_id)
-        member_role = ctx.guild.get_role(config.member_role_id)
+        general = await get_or_fetch_channel(ctx.guild, config.general_channel_id)
+        applicant = await get_or_fetch_role(ctx.guild, config.applicant_role_id)
+        member_role = await get_or_fetch_role(ctx.guild, config.member_role_id)
         missing = [
             name
             for name, resource in (

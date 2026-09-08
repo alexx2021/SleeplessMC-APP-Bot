@@ -3,6 +3,8 @@ import logging
 import discord
 from discord.ext import commands
 
+from utils import get_or_fetch_channel, get_or_fetch_role
+
 
 log = logging.getLogger(__name__)
 
@@ -65,7 +67,7 @@ class ApplicationView(discord.ui.View):
                 "SELECT channel_id FROM tickets WHERE user_id = ?", (member.id,)
             )
             if row:
-                existing = guild.get_channel(row[0][0])
+                existing = await get_or_fetch_channel(guild, row[0][0])
                 if existing is not None:
                     await interaction.followup.send(
                         f"You already have an application open in {existing.mention}.",
@@ -78,12 +80,22 @@ class ApplicationView(discord.ui.View):
                 await self.bot.db.commit()
 
             resources = {
-                "application category": guild.get_channel(config.application_category_id),
-                "application log channel": guild.get_channel(config.app_log_channel_id),
-                "general channel": guild.get_channel(config.general_channel_id),
-                "rules channel": guild.get_channel(config.rules_channel_id),
-                "applicant role": guild.get_role(config.applicant_role_id),
-                "member role": guild.get_role(config.member_role_id),
+                "application category": await get_or_fetch_channel(
+                    guild, config.application_category_id
+                ),
+                "application log channel": await get_or_fetch_channel(
+                    guild, config.app_log_channel_id
+                ),
+                "general channel": await get_or_fetch_channel(
+                    guild, config.general_channel_id
+                ),
+                "rules channel": await get_or_fetch_channel(
+                    guild, config.rules_channel_id
+                ),
+                "applicant role": await get_or_fetch_role(
+                    guild, config.applicant_role_id
+                ),
+                "member role": await get_or_fetch_role(guild, config.member_role_id),
             }
             expected_types = {
                 "application category": discord.CategoryChannel,
@@ -181,7 +193,7 @@ class Applications(commands.Cog):
     async def setup_member_permissions(self, ctx: commands.Context) -> None:
         """Make non-panel channels visible only to members."""
         guild = ctx.guild
-        member_role = guild.get_role(self.bot.config.member_role_id)
+        member_role = await get_or_fetch_role(guild, self.bot.config.member_role_id)
         if member_role is None:
             await ctx.send("Cannot set up member permissions: the configured member role is missing.", ephemeral=True)
             return
@@ -191,7 +203,7 @@ class Applications(commands.Cog):
         failures: list[str] = []
         exceptions: list[str] = []
         command_channel_id = ctx.channel.id
-        for channel in guild.channels:
+        for channel in await guild.fetch_channels():
             label = _channel_label(channel)
             if channel.id == command_channel_id:
                 skipped.append(f"{label} — command channel")
@@ -259,7 +271,7 @@ class Applications(commands.Cog):
         )
         if not row:
             return
-        channel = member.guild.get_channel(row[0][0])
+        channel = await get_or_fetch_channel(member.guild, row[0][0])
         if channel is not None:
             await channel.delete(reason="Applicant left the guild")
         await self.bot.db.execute("DELETE FROM tickets WHERE user_id = ?", (member.id,))

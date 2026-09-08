@@ -41,11 +41,15 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
             99: self.created,
         }
         self.roles = {6: MagicMock(spec=discord.Role), 7: MagicMock(spec=discord.Role)}
+        for role_id, role in self.roles.items():
+            role.id = role_id
         self.guild = MagicMock(spec=discord.Guild)
         self.guild.id = 1
         self.guild.default_role = MagicMock(spec=discord.Role)
         self.guild.get_channel.side_effect = self.resources.get
         self.guild.get_role.side_effect = self.roles.get
+        self.guild.fetch_channel.return_value = None
+        self.guild.fetch_roles.return_value = []
         self.guild.create_text_channel = AsyncMock(return_value=self.created)
 
     async def asyncTearDown(self):
@@ -90,6 +94,21 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
             await self.db.execute_fetchall("SELECT user_id, channel_id FROM tickets"),
             [(42, 99)],
         )
+
+    async def test_uncached_resources_are_fetched(self):
+        self.guild.get_channel.side_effect = lambda _: None
+        self.guild.fetch_channel.side_effect = self.resources.get
+        self.guild.get_role.side_effect = lambda _: None
+        self.guild.fetch_roles.return_value = list(self.roles.values())
+
+        await self.click(self.interaction())
+
+        self.guild.fetch_channel.assert_any_await(2)
+        self.guild.fetch_channel.assert_any_await(3)
+        self.guild.fetch_channel.assert_any_await(4)
+        self.guild.fetch_channel.assert_any_await(5)
+        self.assertEqual(self.guild.fetch_roles.await_count, 2)
+        self.guild.create_text_channel.assert_awaited_once()
 
     async def test_missing_resource_stops_before_channel_creation(self):
         del self.resources[2]
@@ -155,7 +174,7 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
         denied = channel("private", 12, visible=False)
         failed = channel("broken", 13)
         failed.set_permissions.side_effect = RuntimeError("Discord failed")
-        self.guild.channels = [panel, open_channel, denied, failed]
+        self.guild.fetch_channels.return_value = [panel, open_channel, denied, failed]
         ctx = SimpleNamespace(
             guild=self.guild, channel=panel, author="moderator", send=AsyncMock()
         )
@@ -165,6 +184,7 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
                 Applications(self.bot), ctx
             )
 
+        self.guild.fetch_channels.assert_awaited_once_with()
         self.assertEqual(open_channel.set_permissions.await_count, 2)
         targets = [call.args[0] for call in open_channel.set_permissions.await_args_list]
         self.assertEqual(targets, [default_role, member_role])
