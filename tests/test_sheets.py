@@ -44,10 +44,11 @@ class SheetTests(unittest.IsolatedAsyncioTestCase):
         finances.col_values.return_value = ["Date", "existing"]
         cog = SheetCommands(SimpleNamespace(config=config()))
         cog.worksheets = {"finances": finances}
-        ctx = SimpleNamespace(send=AsyncMock())
+        ctx = SimpleNamespace(defer=AsyncMock(), send=AsyncMock())
 
         await SheetCommands.donation.callback(cog, ctx, "Donor", 10.0, 1.5)
 
+        ctx.defer.assert_awaited_once_with()
         finances.update.assert_called_once()
         values, cell_range = finances.update.call_args.args
         self.assertEqual(cell_range, "A4:D4")
@@ -58,10 +59,11 @@ class SheetTests(unittest.IsolatedAsyncioTestCase):
         payments = MagicMock()
         cog = SheetCommands(SimpleNamespace(config=config(PAYMENT_UNIT="credit")))
         cog.worksheets = {"payments": payments}
-        ctx = SimpleNamespace(send=AsyncMock())
+        ctx = SimpleNamespace(defer=AsyncMock(), send=AsyncMock())
 
         await SheetCommands.payment.callback(cog, ctx, "Player", 3)
 
+        ctx.defer.assert_awaited_once_with()
         payments.insert_row.assert_called_once_with(["Player", 3], 2)
         self.assertIn("3 credit", ctx.send.await_args.args[0])
 

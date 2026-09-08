@@ -34,6 +34,7 @@ class TicketTests(unittest.IsolatedAsyncioTestCase):
             guild=self.guild,
             channel=self.channel,
             author="moderator",
+            defer=AsyncMock(),
             send=AsyncMock(),
         )
 
@@ -46,6 +47,7 @@ class TicketTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaisesRegex(RuntimeError, "Discord failed"):
             await Tickets.accept.callback(self.cog, self.ctx)
 
+        self.ctx.defer.assert_awaited_once_with(ephemeral=True)
         self.assertEqual(
             await self.db.execute_fetchall("SELECT user_id, channel_id FROM tickets"),
             [(42, 99)],

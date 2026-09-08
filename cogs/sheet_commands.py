@@ -68,6 +68,7 @@ class SheetCommands(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def banlist(self, ctx: commands.Context) -> None:
         """Show the configured ban list."""
+        await ctx.defer()
         sheets = await self._sheets(ctx)
         if sheets is None:
             return
@@ -103,6 +104,7 @@ class SheetCommands(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def ban(self, ctx: commands.Context, username: str, *, reason: str) -> None:
         """Add a player to the configured ban worksheet."""
+        await ctx.defer()
         sheets = await self._sheets(ctx)
         if sheets is None:
             return
@@ -129,6 +131,7 @@ class SheetCommands(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def discipline(self, ctx: commands.Context, username: str, amount: int) -> None:
         """Add discipline points for a player."""
+        await ctx.defer()
         sheets = await self._sheets(ctx)
         if sheets is None:
             return
@@ -153,6 +156,7 @@ class SheetCommands(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def payment(self, ctx: commands.Context, username: str, amount: int) -> None:
         """Record an in-game payment."""
+        await ctx.defer()
         sheets = await self._sheets(ctx)
         if sheets is None:
             return
@@ -175,6 +179,7 @@ class SheetCommands(commands.Cog):
         self, ctx: commands.Context, donor: str, amount: float, fee: float
     ) -> None:
         """Record a donation and its fee."""
+        await ctx.defer()
         sheets = await self._sheets(ctx)
         if sheets is None:
             return

@@ -76,6 +76,7 @@ class Tickets(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def accept(self, ctx: commands.Context) -> None:
         """Accept the application in the current channel."""
+        await ctx.defer(ephemeral=True)
         user_id = await self._ticket(ctx)
         if user_id is None:
             return
@@ -112,12 +113,15 @@ class Tickets(commands.Cog):
             "DELETE FROM tickets WHERE channel_id = ?", (ctx.channel.id,)
         )
         await self.bot.db.commit()
+        if getattr(ctx, "interaction", None) is not None:
+            await ctx.send("Application accepted.", ephemeral=True)
 
     @commands.hybrid_command(aliases=["reject"])
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
     async def deny(self, ctx: commands.Context, *, reason: str | None = None) -> None:
         """Deny the application in the current channel."""
+        await ctx.defer(ephemeral=True)
         user_id = await self._ticket(ctx)
         if user_id is None:
             return
@@ -135,6 +139,8 @@ class Tickets(commands.Cog):
             "DELETE FROM tickets WHERE channel_id = ?", (ctx.channel.id,)
         )
         await self.bot.db.commit()
+        if getattr(ctx, "interaction", None) is not None:
+            await ctx.send("Application denied.", ephemeral=True)
 
 
 async def setup(bot: commands.Bot) -> None:

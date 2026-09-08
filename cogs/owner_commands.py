@@ -9,6 +9,7 @@ class OwnerCommands(commands.Cog, command_attrs={"hidden": True}):
     @commands.is_owner()
     async def leave(self, ctx: commands.Context, guild_id: int) -> None:
         """Make the bot leave a guild."""
+        await ctx.defer(ephemeral=True)
         guild = self.bot.get_guild(guild_id)
         if guild is None:
             await ctx.send("That guild is not available.", ephemeral=True)
