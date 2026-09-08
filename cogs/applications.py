@@ -25,7 +25,11 @@ class ApplicationView(discord.ui.View):
         config = self.bot.config
         guild = interaction.guild
         member = interaction.user
-        if guild is None or guild.id != config.guild_id or not isinstance(member, discord.Member):
+        if (
+            guild is None
+            or guild.id != config.guild_id
+            or not isinstance(member, discord.Member)
+        ):
             await interaction.followup.send(
                 "This application panel is not valid here.", ephemeral=True
             )
@@ -130,6 +134,9 @@ class ApplicationView(discord.ui.View):
 class Applications(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+
+    async def cog_check(self, ctx: commands.Context) -> bool:
+        return ctx.guild is not None and ctx.guild.id == self.bot.config.guild_id
 
     @commands.hybrid_command(name="setup-applications")
     @commands.guild_only()

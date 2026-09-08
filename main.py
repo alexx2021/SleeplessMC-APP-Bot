@@ -5,7 +5,7 @@ import aiosqlite
 import discord
 from discord.ext import commands
 
-from config import Config, load_config
+from config import Config, ConfigurationError, load_config
 from utils import migrate_tickets
 
 
@@ -51,7 +51,10 @@ class GameServerBot(commands.Bot):
 
     async def on_ready(self) -> None:
         logging.getLogger(__name__).info(
-            "Logged in as %s (%s) in %d guild(s)", self.user, self.user.id, len(self.guilds)
+            "Logged in as %s (%s) in %d guild(s)",
+            self.user,
+            self.user.id,
+            len(self.guilds),
         )
 
 
@@ -60,7 +63,10 @@ def main() -> None:
         level=logging.INFO,
         format="%(asctime)s:%(levelname)s:%(name)s: %(message)s",
     )
-    config = load_config()
+    try:
+        config = load_config()
+    except ConfigurationError as error:
+        raise SystemExit(f"Configuration error: {error}") from error
     GameServerBot(config).run(config.discord_token, log_handler=None)
 
 

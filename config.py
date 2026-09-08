@@ -95,16 +95,33 @@ _ID_FIELDS = {
 
 
 def _lines(value: str) -> tuple[str, ...]:
-    return tuple(line.strip() for line in value.replace("\\n", "\n").splitlines() if line.strip())
+    return tuple(
+        line.strip()
+        for line in value.replace("\\n", "\n").splitlines()
+        if line.strip()
+    )
 
 
 def load_config(
     env: Mapping[str, str] | None = None,
     dotenv_path: str | Path | None = ".env",
 ) -> Config:
-    values = dict(dotenv_values(dotenv_path)) if dotenv_path and Path(dotenv_path).is_file() else {}
+    values = (
+        dict(dotenv_values(dotenv_path))
+        if dotenv_path and Path(dotenv_path).is_file()
+        else {}
+    )
     values.update(environ if env is None else env)
-    missing = [name for name in (*_TEXT_FIELDS, *_ID_FIELDS, "APPLICATION_QUESTIONS", "ENABLE_JISHAKU") if not values.get(name, "").strip()]
+    missing = [
+        name
+        for name in (
+            *_TEXT_FIELDS,
+            *_ID_FIELDS,
+            "APPLICATION_QUESTIONS",
+            "ENABLE_JISHAKU",
+        )
+        if not values.get(name, "").strip()
+    ]
     if missing:
         raise ConfigurationError(f"Missing required environment variables: {', '.join(missing)}")
 
@@ -121,11 +138,15 @@ def load_config(
         except (TypeError, ValueError):
             malformed.append(name)
     if malformed:
-        raise ConfigurationError(f"Environment variables must be positive integers: {', '.join(malformed)}")
+        raise ConfigurationError(
+            f"Environment variables must be positive integers: {', '.join(malformed)}"
+        )
 
     questions = _lines(values["APPLICATION_QUESTIONS"])
     if not questions:
-        raise ConfigurationError("APPLICATION_QUESTIONS must contain at least one non-empty question")
+        raise ConfigurationError(
+            "APPLICATION_QUESTIONS must contain at least one non-empty question"
+        )
     enabled = values["ENABLE_JISHAKU"].strip().lower()
     if enabled not in {"true", "false"}:
         raise ConfigurationError("ENABLE_JISHAKU must be true or false")
@@ -136,5 +157,8 @@ def load_config(
         enable_jishaku=enabled == "true",
     )
     if len(config.application_prompt) > 2_000:
-        raise ConfigurationError("APPLICATION_QUESTIONS render an application prompt longer than Discord's 2,000-character limit")
+        raise ConfigurationError(
+            "APPLICATION_QUESTIONS render an application prompt longer than "
+            "Discord's 2,000-character limit"
+        )
     return config

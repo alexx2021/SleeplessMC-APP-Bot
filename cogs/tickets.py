@@ -27,6 +27,9 @@ class Tickets(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    async def cog_check(self, ctx: commands.Context) -> bool:
+        return ctx.guild is not None and ctx.guild.id == self.bot.config.guild_id
+
     async def _ticket(self, ctx: commands.Context) -> int | None:
         if ctx.guild is None:
             return None

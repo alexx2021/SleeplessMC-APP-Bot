@@ -1,6 +1,5 @@
 import logging
 
-import discord
 from discord.ext import commands
 
 
@@ -28,24 +27,14 @@ class Errors(commands.Cog):
             return
         if isinstance(error, commands.NotOwner):
             return
+        if isinstance(error, commands.CheckFailure):
+            await ctx.send("This command is not available here.", ephemeral=True)
+            return
         if isinstance(error, (commands.BadArgument, commands.UserInputError)):
             await ctx.send(f"Invalid command arguments: {error}", ephemeral=True)
             return
         log.error("Command %s failed", ctx.command, exc_info=error)
         await ctx.send("The command failed. Check the bot logs.", ephemeral=True)
-
-    @commands.Cog.listener()
-    async def on_app_command_error(
-        self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError
-    ) -> None:
-        log.error("Application command failed", exc_info=error)
-        send = (
-            interaction.followup.send
-            if interaction.response.is_done()
-            else interaction.response.send_message
-        )
-        await send("The command failed. Check the bot logs.", ephemeral=True)
-
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Errors(bot))

@@ -16,13 +16,28 @@ def ban_pages(rows: list[list[str]], page_size: int = 20) -> list[list[tuple[str
         for row in rows
         if len(row) >= 3 and row[1].strip()
     ]
-    return [entries[index : index + page_size] for index in range(0, len(entries), page_size)] or [[]]
+    pages: list[list[tuple[str, str]]] = []
+    for entry in entries:
+        page_characters = (
+            sum(len(name) + len(reason) for name, reason in pages[-1]) if pages else 0
+        )
+        if (
+            not pages
+            or len(pages[-1]) == page_size
+            or page_characters + sum(map(len, entry)) > 5_000
+        ):
+            pages.append([])
+        pages[-1].append(entry)
+    return pages or [[]]
 
 
 class SheetCommands(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.worksheets = None
+
+    async def cog_check(self, ctx: commands.Context) -> bool:
+        return ctx.guild is not None and ctx.guild.id == self.bot.config.guild_id
 
     def _open_worksheets(self):
         config = self.bot.config
@@ -43,7 +58,9 @@ class SheetCommands(commands.Cog):
             return self.worksheets
         except Exception:
             log.exception("Could not open configured spreadsheet")
-            await ctx.send("Google Sheets is unavailable. Check the bot logs.", ephemeral=True)
+            await ctx.send(
+                "Google Sheets is unavailable. Check the bot logs.", ephemeral=True
+            )
             return None
 
     @commands.hybrid_command()
@@ -55,10 +72,12 @@ class SheetCommands(commands.Cog):
         if sheets is None:
             return
         try:
-            rows = await asyncio.to_thread(sheets["bans"].get_all_values)
+            rows = (await asyncio.to_thread(sheets["bans"].get_all_values))[1:]
         except Exception:
             log.exception("Could not read ban list")
-            await ctx.send("Could not read the ban list. Check the bot logs.", ephemeral=True)
+            await ctx.send(
+                "Could not read the ban list. Check the bot logs.", ephemeral=True
+            )
             return
         pages = ban_pages(rows)
         for page_number, entries in enumerate(pages, 1):
@@ -70,7 +89,11 @@ class SheetCommands(commands.Cog):
                 embed.set_footer(text=f"Page {page_number} of {len(pages)}")
             if entries:
                 for username, reason in entries:
-                    embed.add_field(name=username, value=reason or "No reason provided", inline=False)
+                    embed.add_field(
+                        name=username,
+                        value=reason or "No reason provided",
+                        inline=False,
+                    )
             else:
                 embed.description = "No banned players."
             await ctx.send(embed=embed)
@@ -86,12 +109,18 @@ class SheetCommands(commands.Cog):
         try:
             await asyncio.to_thread(
                 sheets["bans"].insert_row,
-                [datetime.now().astimezone().isoformat(timespec="seconds"), username, reason],
+                [
+                    datetime.now().astimezone().isoformat(timespec="seconds"),
+                    username,
+                    reason,
+                ],
                 2,
             )
         except Exception:
             log.exception("Could not add ban")
-            await ctx.send("Could not update the ban list. Check the bot logs.", ephemeral=True)
+            await ctx.send(
+                "Could not update the ban list. Check the bot logs.", ephemeral=True
+            )
             return
         await ctx.send(f"{username} was added to the ban list.")
 
@@ -106,7 +135,11 @@ class SheetCommands(commands.Cog):
         try:
             await asyncio.to_thread(
                 sheets["discipline"].insert_row,
-                [datetime.now().astimezone().isoformat(timespec="seconds"), username, amount],
+                [
+                    datetime.now().astimezone().isoformat(timespec="seconds"),
+                    username,
+                    amount,
+                ],
                 2,
             )
         except Exception:
@@ -132,7 +165,7 @@ class SheetCommands(commands.Cog):
             await ctx.send("Could not record the payment. Check the bot logs.", ephemeral=True)
             return
         await ctx.send(
-            f"Recorded {username}'s payment of {amount} {self.bot.config.payment_unit}(s)."
+            f"Recorded {username}'s payment of {amount} {self.bot.config.payment_unit}."
         )
 
     @commands.hybrid_command()
@@ -150,12 +183,14 @@ class SheetCommands(commands.Cog):
             worksheet = sheets["finances"]
             row = len([value for value in worksheet.col_values(1) if value]) + 2
             worksheet.update(
-                [[
-                    datetime.now().astimezone().isoformat(timespec="seconds"),
-                    f"Donation ({donor})",
-                    amount,
-                    fee,
-                ]],
+                [
+                    [
+                        datetime.now().astimezone().isoformat(timespec="seconds"),
+                        f"Donation ({donor})",
+                        amount,
+                        fee,
+                    ]
+                ],
                 f"A{row}:D{row}",
                 value_input_option="USER_ENTERED",
             )
