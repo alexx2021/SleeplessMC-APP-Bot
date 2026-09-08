@@ -1,0 +1,5 @@
+discord.py==2.7.1
+aiosqlite==0.22.1
+gspread==6.2.1
+python-dotenv==1.2.3
+jishaku==2.7.5
